@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import os
 import subprocess
 import sys
 import threading
@@ -17,8 +18,9 @@ from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent
 FRONTEND_DIST = ROOT / "frontend" / "dist"
-HOST = "127.0.0.1"
-PORT = 8765
+HOST = os.getenv("HOST", "0.0.0.0")
+PORT = int(os.getenv("PORT", "8765"))
+ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")
 JOBS: dict[str, dict[str, object]] = {}
 JOBS_LOCK = threading.Lock()
 
@@ -125,52 +127,58 @@ def json_response(handler: BaseHTTPRequestHandler, data: object, status: int = 2
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json; charset=utf-8")
     handler.send_header("Content-Length", str(len(body)))
+    handler.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
     handler.end_headers()
     handler.wfile.write(body)
 
 
 def run_job(job_id: str, payload: dict[str, object]) -> None:
-    output = Path(str(payload["output"])).expanduser()
-    if not output.is_absolute():
-        output = ROOT / output
-    command = [
-        sys.executable, str(ROOT / "clipper.py"), str(payload["source"]),
-        "--out", str(output), "--num", str(payload["num"]),
-        "--min", str(payload["minimum"]), "--max", str(payload["maximum"]),
-        "--format", str(payload["format"]), "--model", str(payload["model"]),
-    ]
-    if not payload["captions"]:
-        command.append("--no-captions")
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    with JOBS_LOCK:
-        JOBS[job_id]["process"] = process
-    assert process.stdout is not None
-    log: list[str] = []
-    for line in process.stdout:
-        line = line.rstrip()
-        log.append(line)
-        progress = 0
-        if line.startswith("[") and "/4]" in line:
-            try:
-                progress = (int(line[1]) - 1) * 25
-            except ValueError:
-                progress = 0
+    try:
+        output = Path(str(payload["output"])).expanduser()
+        if not output.is_absolute():
+            output = ROOT / output
+        command = [
+            sys.executable, str(ROOT / "clipper.py"), str(payload["source"]),
+            "--out", str(output), "--num", str(payload["num"]),
+            "--min", str(payload["minimum"]), "--max", str(payload["maximum"]),
+            "--format", str(payload["format"]), "--model", str(payload["model"]),
+        ]
+        if not payload["captions"]:
+            command.append("--no-captions")
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         with JOBS_LOCK:
-            JOBS[job_id].update(log=log[-200:], progress=progress, message=line or "Working...")
-    code = process.wait()
-    results: list[dict[str, object]] = []
-    if code == 0:
-        metadata = output / "clips.json"
-        results = json.loads(metadata.read_text(encoding="utf-8"))
-        for item in results:
-            item["url"] = f"/api/jobs/{job_id}/files/{Path(str(item['file'])).name}"
-    with JOBS_LOCK:
-        JOBS[job_id].update(
-            status="done" if code == 0 else "failed",
-            progress=100 if code == 0 else JOBS[job_id]["progress"],
-            message="Complete" if code == 0 else "The clipper process failed.",
-            results=results,
-        )
+            JOBS[job_id]["process"] = process
+        assert process.stdout is not None
+        log: list[str] = []
+        for line in process.stdout:
+            line = line.rstrip()
+            log.append(line)
+            progress = 0
+            if line.startswith("[") and "/4]" in line:
+                try:
+                    progress = (int(line[1]) - 1) * 25
+                except ValueError:
+                    progress = 0
+            with JOBS_LOCK:
+                JOBS[job_id].update(log=log[-200:], progress=progress, message=line or "Working...")
+        code = process.wait()
+        results: list[dict[str, object]] = []
+        if code == 0:
+            metadata = output / "clips.json"
+            results = json.loads(metadata.read_text(encoding="utf-8"))
+            for item in results:
+                item["url"] = f"/api/jobs/{job_id}/files/{Path(str(item['file'])).name}"
+        with JOBS_LOCK:
+            JOBS[job_id].update(
+                status="done" if code == 0 else "failed",
+                progress=100 if code == 0 else JOBS[job_id]["progress"],
+                message="Complete" if code == 0 else "The clipper process failed.",
+                results=results,
+            )
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
+        with JOBS_LOCK:
+            JOBS[job_id].update(status="failed", message=str(exc), results=[])
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -188,6 +196,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
+            self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
             self.end_headers()
             self.wfile.write(body)
             return
@@ -240,6 +249,13 @@ class Handler(BaseHTTPRequestHandler):
         threading.Thread(target=run_job, args=(job_id, payload), daemon=True).start()
         json_response(self, {"id": job_id}, 202)
 
+    def do_OPTIONS(self) -> None:
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
     def _serve_file(self, job_id: str, filename: str) -> None:
         with JOBS_LOCK:
             job = JOBS.get(job_id)
@@ -258,6 +274,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", mimetypes.guess_type(path.name)[0] or "application/octet-stream")
         self.send_header("Content-Length", str(len(data)))
+        self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.end_headers()
         self.wfile.write(data)
 
@@ -266,7 +283,8 @@ if __name__ == "__main__":
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     url = f"http://{HOST}:{PORT}"
     print(f"Clipper Studio is running at {url}")
-    webbrowser.open(url)
+    if os.getenv("OPEN_BROWSER", "true").lower() == "true":
+        webbrowser.open(url)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

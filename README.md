@@ -84,6 +84,22 @@ python web_app.py
 
 Then open `http://127.0.0.1:8765`. Press `Ctrl+C` in PowerShell to stop it.
 
+### Deploying the API to Render
+
+The repository includes a `Dockerfile` and `render.yaml` for deploying the
+Python API to Render. Create a new Render Blueprint from this repository and
+set `ALLOWED_ORIGIN` to your Vercel domain, for example:
+
+```text
+https://clipper-studio-five.vercel.app
+```
+
+After Render gives you an API URL, add it to the Vercel project as the
+`VITE_API_BASE_URL` environment variable and redeploy the frontend. The current
+API accepts URLs and files available to the backend; local paths on your own
+computer are not available to a remote Render service. Upload support and
+persistent object storage should be added before public use.
+
 ### Command line
 
 ```bash
