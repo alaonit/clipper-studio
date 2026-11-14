@@ -17,5 +17,6 @@ function EmptyState() {
 
 function Progress({ job }) {
   const completed = job.status === "done";
-  return <div className="progress-wrap" aria-live="polite"><div className="progress-label"><span>{job.message}</span><strong>{job.progress}%</strong></div><div className="progress-track"><div style={{ width: `${job.progress}%` }} /></div>{completed && <div className="success-message">Your clips are ready to review.</div>}</div>;
+  const failed = job.status === "failed";
+  return <div className="progress-wrap" aria-live="polite"><div className="progress-label"><span>{failed ? `Failed: ${job.message}` : job.message}</span><strong>{job.progress}%</strong></div><div className="progress-track"><div style={{ width: `${job.progress}%` }} /></div>{completed && <div className="success-message">Your clips are ready to review.</div>}</div>;
 }

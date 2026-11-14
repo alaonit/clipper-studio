@@ -146,11 +146,13 @@ def run_job(job_id: str, payload: dict[str, object]) -> None:
             sys.executable, str(ROOT / "clipper.py"), str(payload["source"]),
             "--out", str(output), "--num", str(payload["num"]),
             "--min", str(payload["minimum"]), "--max", str(payload["maximum"]),
-            "--format", str(payload["format"]), "--model", str(payload["model"]),
+            "--format", str(payload["format"]
+                            ), "--model", str(payload["model"]),
         ]
         if not payload["captions"]:
             command.append("--no-captions")
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        process = subprocess.Popen(
+            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         with JOBS_LOCK:
             JOBS[job_id]["process"] = process
         assert process.stdout is not None
@@ -165,7 +167,8 @@ def run_job(job_id: str, payload: dict[str, object]) -> None:
                 except ValueError:
                     progress = 0
             with JOBS_LOCK:
-                JOBS[job_id].update(log=log[-200:], progress=progress, message=line or "Working...")
+                JOBS[job_id].update(
+                    log=log[-200:], progress=progress, message=line or "Working...")
         code = process.wait()
         results: list[dict[str, object]] = []
         if code == 0:
@@ -173,11 +176,15 @@ def run_job(job_id: str, payload: dict[str, object]) -> None:
             results = json.loads(metadata.read_text(encoding="utf-8"))
             for item in results:
                 item["url"] = f"/api/jobs/{job_id}/files/{Path(str(item['file'])).name}"
+        failure_message = next(
+            (line for line in reversed(log) if line.startswith(("Error:", "ERROR:"))),
+            "The clipper process failed.",
+        )
         with JOBS_LOCK:
             JOBS[job_id].update(
                 status="done" if code == 0 else "failed",
                 progress=100 if code == 0 else JOBS[job_id]["progress"],
-                message="Complete" if code == 0 else "The clipper process failed.",
+                message="Complete" if code == 0 else failure_message,
                 results=results,
             )
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError, RuntimeError) as exc:
@@ -205,7 +212,8 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
         if parsed.path.startswith("/assets/") and FRONTEND_DIST.is_dir():
-            candidate = (FRONTEND_DIST / parsed.path.removeprefix("/")).resolve()
+            candidate = (FRONTEND_DIST /
+                         parsed.path.removeprefix("/")).resolve()
             if FRONTEND_DIST.resolve() in candidate.parents and candidate.is_file():
                 self._serve_path(candidate)
                 return
@@ -227,7 +235,8 @@ class Handler(BaseHTTPRequestHandler):
     def _serve_path(self, path: Path) -> None:
         data = path.read_bytes()
         self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", mimetypes.guess_type(path.name)[0] or "application/octet-stream")
+        self.send_header("Content-Type", mimetypes.guess_type(path.name)
+                         [0] or "application/octet-stream")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
@@ -250,24 +259,28 @@ class Handler(BaseHTTPRequestHandler):
             json_response(self, {"error": str(exc)}, 400)
             return
         job_id = uuid.uuid4().hex
-        job = {"status": "running", "progress": 0, "message": "Preparing...", "log": [], "results": []}
+        job = {"status": "running", "progress": 0,
+               "message": "Preparing...", "log": [], "results": []}
         with JOBS_LOCK:
             JOBS[job_id] = job
-        threading.Thread(target=run_job, args=(job_id, payload), daemon=True).start()
+        threading.Thread(target=run_job, args=(
+            job_id, payload), daemon=True).start()
         json_response(self, {"id": job_id}, 202)
 
     def _handle_upload(self) -> None:
         content_type = self.headers.get("Content-Type", "")
         match = re.search(r"boundary=(?:\"([^\"]+)\"|([^;]+))", content_type)
         if not match:
-            json_response(self, {"error": "A multipart video upload is required."}, 400)
+            json_response(
+                self, {"error": "A multipart video upload is required."}, 400)
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             length = 0
         if length <= 0 or length > MAX_UPLOAD_BYTES:
-            json_response(self, {"error": "Video uploads must be between 1 byte and 500 MB."}, 413)
+            json_response(
+                self, {"error": "Video uploads must be between 1 byte and 500 MB."}, 413)
             return
         body = self.rfile.read(length)
         boundary = (match.group(1) or match.group(2)).encode("utf-8")
@@ -287,7 +300,8 @@ class Handler(BaseHTTPRequestHandler):
                 break
         extension = Path(filename).suffix.lower()
         if not file_data or extension not in ALLOWED_UPLOAD_EXTENSIONS:
-            json_response(self, {"error": "Upload an MP4, MOV, MKV, AVI, M4V, or WebM video."}, 400)
+            json_response(
+                self, {"error": "Upload an MP4, MOV, MKV, AVI, M4V, or WebM video."}, 400)
             return
         UPLOADS.mkdir(parents=True, exist_ok=True)
         destination = UPLOADS / f"{uuid.uuid4().hex}{extension}"
@@ -307,7 +321,8 @@ class Handler(BaseHTTPRequestHandler):
         if not job:
             json_response(self, {"error": "Job not found."}, 404)
             return
-        result = next((item for item in job["results"] if Path(str(item["file"])).name == filename), None)
+        result = next((item for item in job["results"] if Path(
+            str(item["file"])).name == filename), None)
         if not result:
             json_response(self, {"error": "File not found."}, 404)
             return
@@ -317,7 +332,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         data = path.read_bytes()
         self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", mimetypes.guess_type(path.name)[0] or "application/octet-stream")
+        self.send_header("Content-Type", mimetypes.guess_type(path.name)
+                         [0] or "application/octet-stream")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Access-Control-Allow-Origin", ALLOWED_ORIGIN)
         self.end_headers()
