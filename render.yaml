@@ -2,7 +2,7 @@ services:
   - type: web
     name: clipper-studio-api
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /
     envVars:
       - key: ALLOWED_ORIGIN
