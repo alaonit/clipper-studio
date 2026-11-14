@@ -5,7 +5,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     OPEN_BROWSER=false
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get install -y --no-install-recommends curl ffmpeg unzip \
+    && curl -fsSL https://github.com/denoland/deno/releases/download/v2.3.3/deno-x86_64-unknown-linux-gnu.zip -o /tmp/deno.zip \
+    && unzip -q /tmp/deno.zip -d /usr/local/bin \
+    && chmod +x /usr/local/bin/deno \
+    && rm /tmp/deno.zip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

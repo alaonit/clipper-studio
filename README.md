@@ -110,7 +110,11 @@ python clipper.py URL --cookies-from-browser chrome --model small --crf 18
 ```
 
 The source and audio/transcript cache are stored in `OUT/_work`; metadata is
-written to `OUT/clips.json`. If a download fails, try `pip install -U yt-dlp`.
+written to `OUT/clips.json`. YouTube downloads require a current yt-dlp
+installation and a JavaScript runtime. The Render image installs Deno and
+the yt-dlp EJS challenge scripts automatically. YouTube may still block
+requests from cloud datacenter IPs; for those videos, use a direct video URL
+or upload the source file instead of relying on YouTube extraction.
 
 | Option | Default | Description |
 |---|---:|---|

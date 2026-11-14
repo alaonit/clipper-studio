@@ -48,7 +48,7 @@ def download(source: str, work: Path, cookies: str | None) -> Path:
     output = str(work / "source.%(ext)s")
     command = [
         sys.executable, "-m", "yt_dlp", "-f", "bv*+ba/b", "--merge-output-format", "mp4",
-        "--no-playlist", "-o", output,
+        "--js-runtimes", "deno", "--no-playlist", "-o", output,
     ]
     if cookies:
         command.extend(["--cookies-from-browser", cookies])
