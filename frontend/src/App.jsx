@@ -12,7 +12,7 @@ export function App() {
 
   function submit(event) {
     event.preventDefault();
-    if (form.minimum <= 0 || form.maximum < form.minimum || form.num <= 0) {
+    if ((!form.file && !form.source.trim()) || form.minimum <= 0 || form.maximum < form.minimum || form.num <= 0) {
       setValidationError("Check the clip count and duration range.");
       return;
     }
@@ -34,7 +34,7 @@ export function App() {
         <SourceSettings form={form} onChange={setForm} onSubmit={submit} disabled={isStarting} error={validationError || error} />
         <ResultsPanel job={job} />
       </div>
-      <footer>Clipper Studio <span>·</span> Private, local video processing</footer>
+      <footer>Clipper Studio <span>·</span> Private video processing</footer>
     </main>
   );
 }

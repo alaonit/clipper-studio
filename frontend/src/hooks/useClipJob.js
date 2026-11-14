@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createJob, getJob } from "../api/jobs";
+import { createJob, getJob, uploadSource } from "../api/jobs";
 
 const POLL_INTERVAL_MS = 800;
 
@@ -46,7 +46,12 @@ export function useClipJob() {
     const requestController = new AbortController();
     controller.current = requestController;
     try {
-      const { id } = await createJob(payload, requestController.signal);
+      const source = payload.file
+        ? (await uploadSource(payload.file, requestController.signal)).source
+        : payload.source;
+      const jobPayload = { ...payload, source };
+      delete jobPayload.file;
+      const { id } = await createJob(jobPayload, requestController.signal);
       await poll(id);
     } catch (requestError) {
       if (requestError.name !== "AbortError") setError(requestError.message);

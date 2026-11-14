@@ -6,8 +6,9 @@ export function SourceSettings({ form, onChange, onSubmit, disabled, error }) {
   return (
     <form className="card settings-card" onSubmit={onSubmit}>
       <div className="card-heading"><div><span className="step">01</span><h2>Source & settings</h2></div><span className="required">Required</span></div>
-      <label>Video source <span>Local path or URL</span></label>
-      <input className="text-input" value={form.source} onChange={(event) => update("source", event.target.value)} placeholder="C:\Videos\podcast.mp4 or https://..." required />
+      <label>Video source <span>Upload a file or paste a URL</span></label>
+      <input className="text-input" type="file" accept="video/*" onChange={(event) => update("file", event.target.files?.[0] || null)} />
+      <input className="text-input" value={form.source} onChange={(event) => update("source", event.target.value)} placeholder="https://... direct video URL" required={!form.file} />
       <label>Output folder</label>
       <div className="input-with-icon"><FolderOpen size={17} /><input className="text-input" value={form.output} onChange={(event) => update("output", event.target.value)} /></div>
       <div className="field-grid">

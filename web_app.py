@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -23,6 +24,9 @@ PORT = int(os.getenv("PORT", "8765"))
 ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")
 JOBS: dict[str, dict[str, object]] = {}
 JOBS_LOCK = threading.Lock()
+UPLOADS = ROOT / "uploads"
+MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+ALLOWED_UPLOAD_EXTENSIONS = {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".webm"}
 
 
 PAGE = r"""<!doctype html>
@@ -229,6 +233,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self) -> None:
+        if self.path == "/api/uploads":
+            self._handle_upload()
+            return
         if self.path != "/api/jobs":
             json_response(self, {"error": "Not found."}, 404)
             return
@@ -248,6 +255,44 @@ class Handler(BaseHTTPRequestHandler):
             JOBS[job_id] = job
         threading.Thread(target=run_job, args=(job_id, payload), daemon=True).start()
         json_response(self, {"id": job_id}, 202)
+
+    def _handle_upload(self) -> None:
+        content_type = self.headers.get("Content-Type", "")
+        match = re.search(r"boundary=(?:\"([^\"]+)\"|([^;]+))", content_type)
+        if not match:
+            json_response(self, {"error": "A multipart video upload is required."}, 400)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if length <= 0 or length > MAX_UPLOAD_BYTES:
+            json_response(self, {"error": "Video uploads must be between 1 byte and 500 MB."}, 413)
+            return
+        body = self.rfile.read(length)
+        boundary = (match.group(1) or match.group(2)).encode("utf-8")
+        filename = ""
+        file_data = b""
+        for part in body.split(b"--" + boundary):
+            header_end = part.find(b"\r\n\r\n")
+            if header_end < 0:
+                continue
+            headers = part[:header_end].decode("utf-8", errors="replace")
+            filename_match = re.search(r'filename="([^"]*)"', headers)
+            if filename_match:
+                filename = Path(filename_match.group(1)).name
+                file_data = part[header_end + 4:].rstrip(b"\r\n")
+                if file_data.endswith(b"\r\n"):
+                    file_data = file_data[:-2]
+                break
+        extension = Path(filename).suffix.lower()
+        if not file_data or extension not in ALLOWED_UPLOAD_EXTENSIONS:
+            json_response(self, {"error": "Upload an MP4, MOV, MKV, AVI, M4V, or WebM video."}, 400)
+            return
+        UPLOADS.mkdir(parents=True, exist_ok=True)
+        destination = UPLOADS / f"{uuid.uuid4().hex}{extension}"
+        destination.write_bytes(file_data)
+        json_response(self, {"source": str(destination)}, 201)
 
     def do_OPTIONS(self) -> None:
         self.send_response(HTTPStatus.NO_CONTENT)

@@ -96,9 +96,10 @@ https://clipper-studio-five.vercel.app
 
 After Render gives you an API URL, add it to the Vercel project as the
 `VITE_API_BASE_URL` environment variable and redeploy the frontend. The current
-API accepts URLs and files available to the backend; local paths on your own
-computer are not available to a remote Render service. Upload support and
-persistent object storage should be added before public use.
+API accepts direct URLs and browser video uploads. Local filesystem paths on
+your own computer are not available to a remote Render service. Uploaded files
+are stored on the service's temporary disk and should be replaced with
+persistent object storage before public use.
 
 ### Command line
 

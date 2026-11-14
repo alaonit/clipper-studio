@@ -4,6 +4,7 @@ export const MODEL_OPTIONS = ["tiny", "base", "small", "medium", "large-v3"];
 
 export const DEFAULT_FORM = Object.freeze({
   source: "",
+  file: null,
   output: "clips_output",
   num: 1,
   minimum: 20,
