@@ -22,6 +22,7 @@ FRONTEND_DIST = ROOT / "frontend" / "dist"
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8765"))
 ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")
+YTDLP_COOKIES_FROM_BROWSER = os.getenv("YTDLP_COOKIES_FROM_BROWSER", "").strip()
 JOBS: dict[str, dict[str, object]] = {}
 JOBS_LOCK = threading.Lock()
 UPLOADS = ROOT / "uploads"
@@ -149,6 +150,8 @@ def run_job(job_id: str, payload: dict[str, object]) -> None:
             "--format", str(payload["format"]
                             ), "--model", str(payload["model"]),
         ]
+        if YTDLP_COOKIES_FROM_BROWSER:
+            command.extend(["--cookies-from-browser", YTDLP_COOKIES_FROM_BROWSER])
         if not payload["captions"]:
             command.append("--no-captions")
         process = subprocess.Popen(

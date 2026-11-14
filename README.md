@@ -110,6 +110,17 @@ python clipper.py "C:\videos\podcast.mp4" --format original --no-captions
 python clipper.py URL --cookies-from-browser chrome --model small --crf 18
 ```
 
+For local YouTube processing, explicitly allow the local backend to read your
+browser's cookie database:
+
+```powershell
+$env:YTDLP_COOKIES_FROM_BROWSER="chrome"
+python web_app.py
+```
+
+Use `edge` or another browser name when appropriate. Keep this setting local;
+do not configure it on Render or commit cookies to the repository.
+
 The source and audio/transcript cache are stored in `OUT/_work`; metadata is
 written to `OUT/clips.json`. YouTube downloads require a current yt-dlp
 installation and a JavaScript runtime. The Render image installs Deno and
