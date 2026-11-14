@@ -23,6 +23,7 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8765"))
 ALLOWED_ORIGIN = os.getenv("ALLOWED_ORIGIN", "*")
 YTDLP_COOKIES_FROM_BROWSER = os.getenv("YTDLP_COOKIES_FROM_BROWSER", "").strip()
+ALLOW_URL_DOWNLOAD = os.getenv("ALLOW_URL_DOWNLOAD", "true").lower() == "true"
 JOBS: dict[str, dict[str, object]] = {}
 JOBS_LOCK = threading.Lock()
 UPLOADS = ROOT / "uploads"
@@ -140,11 +141,19 @@ def json_response(handler: BaseHTTPRequestHandler, data: object, status: int = 2
 
 def run_job(job_id: str, payload: dict[str, object]) -> None:
     try:
+        source = str(payload["source"]).strip()
+        parsed_source = urlparse(source)
+        if parsed_source.scheme in {"http", "https"} and not ALLOW_URL_DOWNLOAD:
+            extension = Path(parsed_source.path).suffix.lower()
+            if "youtube.com" in parsed_source.netloc.lower() or "youtu.be" in parsed_source.netloc.lower():
+                raise RuntimeError("YouTube links can't be downloaded here. Upload the video file instead.")
+            if extension not in {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".webm"}:
+                raise RuntimeError("This hosted service accepts uploads or direct video file URLs only.")
         output = Path(str(payload["output"])).expanduser()
         if not output.is_absolute():
             output = ROOT / output
         command = [
-            sys.executable, str(ROOT / "clipper.py"), str(payload["source"]),
+            sys.executable, str(ROOT / "clipper.py"), source,
             "--out", str(output), "--num", str(payload["num"]),
             "--min", str(payload["minimum"]), "--max", str(payload["maximum"]),
             "--format", str(payload["format"]

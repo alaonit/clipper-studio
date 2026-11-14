@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createJob, getJob, uploadSource } from "../api/jobs";
 
-const POLL_INTERVAL_MS = 800;
+const POLL_INTERVAL_MS = 2000;
 
 export function useClipJob() {
   const [job, setJob] = useState(null);

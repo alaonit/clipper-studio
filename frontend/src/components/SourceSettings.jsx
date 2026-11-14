@@ -1,4 +1,4 @@
-import { FolderOpen, LoaderCircle, Play } from "lucide-react";
+import { FolderOpen, LoaderCircle, Play, Upload } from "lucide-react";
 import { MODEL_OPTIONS } from "../config";
 
 export function SourceSettings({ form, onChange, onSubmit, disabled, error }) {
@@ -6,8 +6,9 @@ export function SourceSettings({ form, onChange, onSubmit, disabled, error }) {
   return (
     <form className="card settings-card" onSubmit={onSubmit}>
       <div className="card-heading"><div><span className="step">01</span><h2>Source & settings</h2></div><span className="required">Required</span></div>
-      <label>Video source <span>Upload a file or paste a URL</span></label>
-      <input className="text-input" type="file" accept="video/*" onChange={(event) => update("file", event.target.files?.[0] || null)} />
+      <label>Video source <span>Upload a file or paste a direct URL</span></label>
+      <label className="upload-button"><Upload size={17} /> Upload a video<input type="file" accept="video/*" onChange={(event) => update("file", event.target.files?.[0] || null)} /></label>
+      {form.file && <div className="upload-name">{form.file.name}</div>}
       <input className="text-input" value={form.source} onChange={(event) => update("source", event.target.value)} placeholder="https://... direct video URL" required={!form.file} />
       <label>Output folder</label>
       <div className="input-with-icon"><FolderOpen size={17} /><input className="text-input" value={form.output} onChange={(event) => update("output", event.target.value)} /></div>

@@ -13,6 +13,8 @@ import wave
 from pathlib import Path
 from statistics import median
 from typing import Any, Iterable, Sequence
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 import numpy as np
 
@@ -24,6 +26,7 @@ HOOK_WORDS = (
 )
 FILLER_RE = re.compile(r"^\s*(um|uh|so yeah|and then|anyway)\b", re.I)
 LAUGHTER_RE = re.compile(r"\b(haha|hehe|lol|lmao|laugh)\b|\[laughter\]", re.I)
+DIRECT_VIDEO_EXTENSIONS = {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".webm"}
 
 
 def run(command: Sequence[str], *, cwd: Path | None = None) -> None:
@@ -45,6 +48,17 @@ def download(source: str, work: Path, cookies: str | None) -> Path:
     cached = next((p for p in work.glob("source.*") if p.suffix.lower() not in {".part", ".json"}), None)
     if cached:
         return cached
+    parsed = urlparse(source)
+    direct_extension = Path(parsed.path).suffix.lower()
+    if parsed.scheme in {"http", "https"} and direct_extension in DIRECT_VIDEO_EXTENSIONS:
+        destination = work / f"source{direct_extension}"
+        try:
+            request = Request(source, headers={"User-Agent": "ClipperStudio/1.0"})
+            with urlopen(request, timeout=60) as response, destination.open("wb") as stream:
+                shutil.copyfileobj(response, stream)
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(f"Direct video download failed: {exc}") from exc
+        return destination
     output = str(work / "source.%(ext)s")
     deno = shutil.which("deno")
     node = shutil.which("node")

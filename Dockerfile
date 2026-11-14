@@ -2,7 +2,8 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    OPEN_BROWSER=false
+    OPEN_BROWSER=false \
+    ALLOW_URL_DOWNLOAD=false
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ffmpeg unzip \

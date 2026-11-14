@@ -9,7 +9,7 @@ export const DEFAULT_FORM = Object.freeze({
   num: 1,
   minimum: 20,
   maximum: 55,
-  model: "small",
+  model: "base",
   format: "vertical",
   captions: true,
 });

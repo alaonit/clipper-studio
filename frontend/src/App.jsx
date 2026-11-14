@@ -12,12 +12,11 @@ export function App() {
 
   function submit(event) {
     event.preventDefault();
-    if (
-      (!form.file && !form.source.trim()) ||
-      form.minimum <= 0 ||
-      form.maximum < form.minimum ||
-      form.num <= 0
-    ) {
+    if (!form.file && !form.source.trim()) {
+      setValidationError("Upload a video or provide a direct video URL.");
+      return;
+    }
+    if (form.minimum <= 0 || form.maximum < form.minimum || form.num <= 0) {
       setValidationError("Check the clip count and duration range.");
       return;
     }
