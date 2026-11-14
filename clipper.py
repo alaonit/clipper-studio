@@ -46,9 +46,14 @@ def download(source: str, work: Path, cookies: str | None) -> Path:
     if cached:
         return cached
     output = str(work / "source.%(ext)s")
+    deno = shutil.which("deno")
+    node = shutil.which("node")
+    js_runtime = ["--js-runtimes", f"deno:{deno}"] if deno else (
+        ["--js-runtimes", f"node:{node}"] if node else []
+    )
     command = [
         sys.executable, "-m", "yt_dlp", "-f", "bv*+ba/b", "--merge-output-format", "mp4",
-        "--js-runtimes", "deno", "--no-playlist", "-o", output,
+        *js_runtime, "--no-playlist", "-o", output,
     ]
     if cookies:
         command.extend(["--cookies-from-browser", cookies])
