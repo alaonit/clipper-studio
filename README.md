@@ -100,8 +100,24 @@ API accepts browser video uploads as the primary hosted workflow. It also
 accepts direct video file URLs, but hosted YouTube downloads are disabled
 because Render's datacenter IPs are commonly blocked by YouTube. Local
 filesystem paths on your own computer are not available to a remote Render
-service. Uploaded files are stored on the service's temporary disk and should
-be replaced with persistent object storage before public use.
+service.
+
+### Supabase persistence
+
+The hosted API uses Supabase when both of these Render environment variables
+are set:
+
+```text
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SECRET_KEY=your-server-only-secret-key
+```
+
+The secret key must stay in Render and must never be added to Vercel,
+frontend code, GitHub, or a committed `.env` file. With Supabase enabled,
+jobs are saved in `public.clip_jobs`, source videos are uploaded to the
+private `videos` bucket, and completed clips are uploaded to the private
+`clips` bucket. The API returns one-hour signed clip URLs. Without these
+variables, local mode continues to use its in-memory jobs and local files.
 
 ### Command line
 

@@ -9,3 +9,7 @@ services:
         sync: false
       - key: ALLOW_URL_DOWNLOAD
         value: "false"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
