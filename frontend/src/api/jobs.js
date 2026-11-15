@@ -29,7 +29,7 @@ async function request(path, options) {
       },
     });
   } catch {
-    throw new Error("The local clipper service is unavailable. Start web_app.py and try again.");
+    throw new Error("The clipping backend is unavailable. Check the backend URL and try again.");
   }
 
   const contentType = response.headers.get("content-type") || "";

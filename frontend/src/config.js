@@ -1,4 +1,5 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.PROD ? "https://clipper-studio-api.onrender.com" : "");
 
 export const MODEL_OPTIONS = ["tiny", "base", "small", "medium", "large-v3"];
 

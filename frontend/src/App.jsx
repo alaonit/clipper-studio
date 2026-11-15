@@ -32,12 +32,31 @@ export function App() {
     fetchJobs().then((data) => setJobs(data.jobs || data || [])).catch(() => setJobs([]));
   }, [page, backendUrl]);
 
+  useEffect(() => {
+    if (!backendUrl) {
+      setConnection("offline");
+      return undefined;
+    }
+    let active = true;
+    checkBackend()
+      .then(() => { if (active) setConnection("online"); })
+      .catch(() => { if (active) setConnection("offline"); });
+    return () => { active = false; };
+  }, [backendUrl]);
+
   async function connect(value) {
-    setBackend(value);
-    await checkBackend();
     setBackendUrl(value);
-    setConnection("online");
-    setConnectOpen(false);
+    setBackend(value.trim().replace(/\/+$/, ""));
+    try {
+      await checkBackend();
+      setConnection("online");
+      setConnectOpen(false);
+    } catch (error) {
+      clearBackendUrl();
+      setBackend("");
+      setConnection("offline");
+      throw error;
+    }
   }
 
   function disconnect() {
