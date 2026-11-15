@@ -8,6 +8,7 @@ import { ResultsPanel } from "./components/ResultsPanel";
 import { SourceSettings } from "./components/SourceSettings";
 import {
   checkBackend, clearBackendUrl, fetchJobs, getBackendUrl, setBackendUrl,
+  fetchSettings,
 } from "./api/jobs";
 import { useClipJob } from "./hooks/useClipJob";
 
@@ -122,7 +123,14 @@ function NewJob({ onDone }) {
 }
 
 function SettingsPage({ backendUrl, connected, onConnect }) {
-  return <div className="studio-content narrow"><header className="page-header"><div><p className="eyebrow">SETTINGS</p><h1>Studio settings</h1><p>Configure the backend connection used for clipping jobs.</p></div></header><section className="studio-card settings-page"><h2>Backend connection</h2><div className="settings-status"><span className={`connection-dot ${connected ? "online" : "offline"}`} /><strong>{connected ? "Connected" : "Not connected"}</strong></div><label>Backend URL</label><input className="studio-input" readOnly value={backendUrl || "No backend configured"} /><p className="settings-help">Use your Render API URL, local API URL, or the public HTTPS URL from a Kaggle/Colab notebook.</p><button className="studio-primary" onClick={onConnect}><Link2 size={16} /> Test or change connection</button></section><section className="studio-card settings-page"><h2>Processing capabilities</h2><div className="capability-list"><span><CheckCircle2 size={16} /> Upload-first processing</span><span><CheckCircle2 size={16} /> Supabase job persistence</span><span><CheckCircle2 size={16} /> Whisper transcription and captions</span><span><CheckCircle2 size={16} /> Vertical and original formats</span></div></section></div>;
+  const [settings, setSettings] = useState(null);
+  useEffect(() => { if (connected) fetchSettings().then(setSettings).catch(() => setSettings(null)); }, [connected]);
+  const features = settings?.features || {};
+  return <div className="studio-content narrow"><header className="page-header"><div><p className="eyebrow">SETTINGS</p><h1>Studio settings</h1><p>Configure the backend connection used for clipping jobs.</p></div></header><section className="studio-card settings-page"><h2>Backend connection</h2><div className="settings-status"><span className={`connection-dot ${connected ? "online" : "offline"}`} /><strong>{connected ? "Connected" : "Not connected"}</strong></div><label>Backend URL</label><input className="studio-input" readOnly value={backendUrl || "No backend configured"} /><p className="settings-help">Use your Render API URL, local API URL, or the public HTTPS URL from a Kaggle/Colab notebook.</p><button className="studio-primary" onClick={onConnect}><Link2 size={16} /> Test or change connection</button></section><section className="studio-card settings-page"><h2>Processing capabilities</h2><div className="capability-list"><Capability label="Upload-first processing" enabled /><Capability label="Supabase job persistence" enabled={settings?.supabase_enabled} /><Capability label="Gemini AI" enabled={features.gemini} /><Capability label="Pexels B-roll" enabled={features.broll} /><Capability label="Speaker diarization" enabled={features.diarization} /><Capability label="YouTube publishing" enabled={features.youtube_publish} /></div><p className="settings-help">Face tracking and full voice-over rendering require the reference GPU backend and its isolated dependencies.</p></section></div>;
+}
+
+function Capability({ label, enabled }) {
+  return <span className={enabled ? "" : "capability-disabled"}>{enabled ? <CheckCircle2 size={16} /> : <X size={16} />}{label}</span>;
 }
 
 function ConnectModal({ initial, onClose, onConnect }) {

@@ -30,6 +30,12 @@ SUPABASE_KEY = (
     os.getenv("SUPABASE_SECRET_KEY", "").strip()
     or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 )
+FEATURE_ENV = {
+    "gemini": "GOOGLE_API_KEY",
+    "broll": "PEXELS_API_KEY",
+    "diarization": "HF_TOKEN",
+    "youtube_publish": "YOUTUBE_CLIENT_ID",
+}
 JOBS: dict[str, dict[str, object]] = {}
 JOBS_LOCK = threading.Lock()
 UPLOADS = ROOT / "uploads"
@@ -389,6 +395,11 @@ class Handler(BaseHTTPRequestHandler):
                 "backend": "clipper-studio",
                 "supabase_enabled": SUPABASE.enabled,
                 "allow_url_download": ALLOW_URL_DOWNLOAD,
+                "features": {
+                    name: bool(os.getenv(env_name, "").strip())
+                    for name, env_name in FEATURE_ENV.items()
+                },
+                "runtime": "render-cpu",
             })
             return
         if parsed.path == "/":

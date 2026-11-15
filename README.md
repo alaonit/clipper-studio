@@ -125,8 +125,22 @@ The Studio currently supports five aspect ratios (`9:16`, `16:9`, `1:1`,
 `3:4`, and `4:5`), four timed subtitle styles, optional background music
 uploads (`mp3`, `m4a`, `wav`, or `ogg`), and generated clip thumbnails.
 Face tracking, B-roll, voice-over, speaker diarization, and social publishing
-still require their respective external models/APIs and are not enabled by
-default in this Render deployment.
+still require their respective external models/APIs. Render exposes the
+provider variables below for capability detection, but the full reference
+renderer should run from its isolated Kaggle/Colab GPU notebook rather than
+the free Render CPU worker:
+
+```text
+GOOGLE_API_KEY
+PEXELS_API_KEY
+HF_TOKEN
+YOUTUBE_CLIENT_ID
+YOUTUBE_CLIENT_SECRET
+```
+
+Never put these values in frontend code or commit them. The Studio Settings
+page reports which provider credentials are configured without displaying
+their values.
 
 ### Studio interface attribution
 
