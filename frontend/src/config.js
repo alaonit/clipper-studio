@@ -16,4 +16,5 @@ export const DEFAULT_FORM = Object.freeze({
   fontStyle: "HORMOZI",
   aiProvider: "gemini",
   device: "auto",
+  bgmFile: null,
 });

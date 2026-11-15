@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createJob, getJob, uploadSource } from "../api/jobs";
+import { createJob, getJob, uploadMusic, uploadSource } from "../api/jobs";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -49,6 +49,9 @@ export function useClipJob() {
       const source = payload.file
         ? (await uploadSource(payload.file, requestController.signal)).source
         : payload.source;
+      const bgm = payload.bgmFile
+        ? (await uploadMusic(payload.bgmFile, requestController.signal)).source
+        : "";
       const jobPayload = {
         ...payload,
         source,
@@ -59,8 +62,10 @@ export function useClipJob() {
         ai_provider: payload.aiProvider,
         whisper_model: payload.model,
         device: payload.device,
+        bgm,
       };
       delete jobPayload.file;
+      delete jobPayload.bgmFile;
       const { id } = await createJob(jobPayload, requestController.signal);
       await poll(id);
     } catch (requestError) {

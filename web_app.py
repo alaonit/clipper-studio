@@ -35,6 +35,7 @@ JOBS_LOCK = threading.Lock()
 UPLOADS = ROOT / "uploads"
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 ALLOWED_UPLOAD_EXTENSIONS = {".avi", ".m4v", ".mkv", ".mov", ".mp4", ".webm"}
+ALLOWED_AUDIO_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg"}
 
 
 class SupabaseClient:
@@ -262,6 +263,12 @@ def run_job(job_id: str, payload: dict[str, object]) -> None:
             "--format", str(payload["format"]
                             ), "--model", str(payload["model"]),
         ]
+        if payload.get("aspectRatio"):
+            command.extend(["--aspect-ratio", str(payload["aspectRatio"])])
+        if payload.get("fontStyle"):
+            command.extend(["--font-style", str(payload["fontStyle"])])
+        if payload.get("bgm"):
+            command.extend(["--bgm", str(payload["bgm"])])
         if YTDLP_COOKIES_FROM_BROWSER:
             command.extend(["--cookies-from-browser", YTDLP_COOKIES_FROM_BROWSER])
         if not payload["captions"]:
@@ -313,8 +320,22 @@ def run_job(job_id: str, payload: dict[str, object]) -> None:
                     clip_storage_path = f"{job_id}/{clip_path.name}"
                     SUPABASE.upload_file("clips", clip_storage_path, clip_path)
                     item["url"] = SUPABASE.signed_url("clips", clip_storage_path)
+                    thumbnail = Path(str(item.get("thumbnail", ""))).resolve()
+                    if thumbnail.is_file():
+                        thumbnail_storage_path = f"{job_id}/{thumbnail.name}"
+                        SUPABASE.upload_file(
+                            "clips", thumbnail_storage_path, thumbnail,
+                        )
+                        item["thumbnail_url"] = SUPABASE.signed_url(
+                            "clips", thumbnail_storage_path,
+                        )
                 else:
                     item["url"] = f"/api/jobs/{job_id}/files/{clip_path.name}"
+                    thumbnail = Path(str(item.get("thumbnail", ""))).resolve()
+                    if thumbnail.is_file():
+                        item["thumbnail_url"] = (
+                            f"/api/jobs/{job_id}/files/{thumbnail.name}"
+                        )
         failure_message = next(
             (line for line in reversed(log) if line.startswith(("Error:", "ERROR:"))),
             "The clipper process failed.",
@@ -417,6 +438,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/uploads":
             self._handle_upload()
             return
+        if self.path == "/api/uploads/audio":
+            self._handle_upload(allowed_extensions=ALLOWED_AUDIO_EXTENSIONS)
+            return
         if self.path != "/api/jobs":
             json_response(self, {"error": "Not found."}, 404)
             return
@@ -465,7 +489,9 @@ class Handler(BaseHTTPRequestHandler):
             SUPABASE.update_job(parts[2], status="cancelled", message="Cancellation requested")
         json_response(self, {"status": "ok"})
 
-    def _handle_upload(self) -> None:
+    def _handle_upload(
+        self, allowed_extensions: set[str] = ALLOWED_UPLOAD_EXTENSIONS,
+    ) -> None:
         content_type = self.headers.get("Content-Type", "")
         match = re.search(r"boundary=(?:\"([^\"]+)\"|([^;]+))", content_type)
         if not match:
@@ -497,9 +523,9 @@ class Handler(BaseHTTPRequestHandler):
                     file_data = file_data[:-2]
                 break
         extension = Path(filename).suffix.lower()
-        if not file_data or extension not in ALLOWED_UPLOAD_EXTENSIONS:
+        if not file_data or extension not in allowed_extensions:
             json_response(
-                self, {"error": "Upload an MP4, MOV, MKV, AVI, M4V, or WebM video."}, 400)
+                self, {"error": "Unsupported upload format."}, 400)
             return
         UPLOADS.mkdir(parents=True, exist_ok=True)
         destination = UPLOADS / f"{uuid.uuid4().hex}{extension}"

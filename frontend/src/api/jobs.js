@@ -59,6 +59,12 @@ export function uploadSource(file, signal) {
   return request("/api/uploads", { method: "POST", body, signal });
 }
 
+export function uploadMusic(file, signal) {
+  const body = new FormData();
+  body.append("file", file);
+  return request("/api/uploads/audio", { method: "POST", body, signal });
+}
+
 export function getJob(jobId, signal) {
   return request(`/api/jobs/${encodeURIComponent(jobId)}`, { signal });
 }

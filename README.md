@@ -119,6 +119,15 @@ private `videos` bucket, and completed clips are uploaded to the private
 `clips` bucket. The API returns one-hour signed clip URLs. Without these
 variables, local mode continues to use its in-memory jobs and local files.
 
+### Studio rendering features
+
+The Studio currently supports five aspect ratios (`9:16`, `16:9`, `1:1`,
+`3:4`, and `4:5`), four timed subtitle styles, optional background music
+uploads (`mp3`, `m4a`, `wav`, or `ogg`), and generated clip thumbnails.
+Face tracking, B-roll, voice-over, speaker diarization, and social publishing
+still require their respective external models/APIs and are not enabled by
+default in this Render deployment.
+
 ### Studio interface attribution
 
 The Studio dashboard navigation and remote-backend connection workflow are

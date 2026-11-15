@@ -28,10 +28,16 @@ export function SourceSettings({ form, onChange, onSubmit, disabled, error }) {
         <button type="button" className={form.format === "original" ? "selected" : ""} onClick={() => update("format", "original")}>Original <small>Source</small></button>
       </div>
       <label className="check-label"><input type="checkbox" checked={form.captions} onChange={(event) => update("captions", event.target.checked)} /><span>Burn in captions</span><small>Word-timed subtitles</small></label>
+      <label className="upload-button"><MusicIcon /> Add background music<input type="file" accept="audio/*" onChange={(event) => update("bgmFile", event.target.files?.[0] || null)} /></label>
+      {form.bgmFile && <div className="upload-name">{form.bgmFile.name}</div>}
       <button className="primary-button" disabled={disabled} type="submit">{disabled ? <><LoaderCircle className="spin" size={18} /> Creating clips...</> : <><Play size={18} fill="currentColor" /> Create clips</>}</button>
       {error && <div className="error" role="alert">{error}</div>}
     </form>
   );
+}
+
+function MusicIcon() {
+  return <span aria-hidden="true">♫</span>;
 }
 
 function NumberField({ label, suffix, value, onChange }) {

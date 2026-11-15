@@ -290,15 +290,25 @@ def ass_escape(text: str) -> str:
     return text.replace("\\", r"\\").replace("{", r"\{").replace("}", r"\}")
 
 
-def build_ass(segments: Sequence[dict[str, Any]], start: float, end: float, path: Path) -> None:
-    """Write three-word, uppercase bottom-centered ASS captions."""
+def build_ass(
+    segments: Sequence[dict[str, Any]], start: float, end: float, path: Path,
+    font_style: str = "HORMOZI",
+) -> None:
+    """Write timed captions using one of the Studio subtitle styles."""
+    styles = {
+        "HORMOZI": ("Arial", 84, -1, 8),
+        "DEFAULT": ("Montserrat", 72, 0, 4),
+        "STORYTELLER": ("Inter", 68, 0, 3),
+        "CINEMATIC": ("Bebas Neue", 86, 0, 5),
+    }
+    font, size, bold, outline = styles.get(font_style.upper(), styles["HORMOZI"])
     words = [w for s in segments for w in s.get("words", [])
              if float(w["end"]) > start and float(w["start"]) < end]
     lines = [
         "[Script Info]", "ScriptType: v4.00+", "PlayResX: 1080", "PlayResY: 1920",
         "[V4+ Styles]",
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-        "Style: Default,Arial,84,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,2,2,80,80,560,1",
+        f"Style: Default,{font},{size},&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,{bold},0,0,0,100,100,0,0,1,{outline},2,2,80,80,560,1",
         "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, Effect, Text",
     ]
     for index in range(0, len(words), 3):
@@ -320,7 +330,8 @@ def slug(text: str) -> str:
 
 def cut_clips(
     video: Path, out: Path, moments: list[dict[str, Any]], segments: Sequence[dict[str, Any]],
-    vertical: bool, captions: bool, crf: int, laughter: np.ndarray,
+    aspect_ratio: str, captions: bool, crf: int, laughter: np.ndarray,
+    font_style: str, bgm: Path | None = None,
 ) -> list[dict[str, Any]]:
     """Render selected clips and return JSON metadata."""
     out.mkdir(parents=True, exist_ok=True)
@@ -337,24 +348,52 @@ def cut_clips(
         target = out / filename
         ass_path = out / f".clip_{number:02d}.ass"
         filter_parts: list[str] = []
-        if vertical:
-            filter_parts.append("[0:v]split=2[bg][fg];[bg]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=20:10[blur];[fg]scale=1080:1920:force_original_aspect_ratio=decrease[sharp];[blur][sharp]overlay=(W-w)/2:(H-h)/2")
+        dimensions = {
+            "9:16": (1080, 1920),
+            "16:9": (1920, 1080),
+            "1:1": (1080, 1080),
+            "3:4": (1080, 1440),
+            "4:5": (1080, 1350),
+        }.get(aspect_ratio)
+        if dimensions:
+            width, height = dimensions
+            filter_parts.append(
+                f"[0:v]split=2[bg][fg];[bg]scale={width}:{height}:"
+                f"force_original_aspect_ratio=increase,crop={width}:{height},"
+                f"boxblur=20:10[blur];[fg]scale={width}:{height}:"
+                f"force_original_aspect_ratio=decrease[sharp];"
+                "[blur][sharp]overlay=(W-w)/2:(H-h)/2"
+            )
         if captions:
-            build_ass(segments, start, end, ass_path)
+            build_ass(segments, start, end, ass_path, font_style)
             filter_parts.append(f"ass={ass_path.name}")
         command = ["ffmpeg", "-y", "-ss", str(start), "-i", str(video), "-t", str(end - start)]
+        if bgm:
+            command.extend(["-stream_loop", "-1", "-i", str(bgm)])
         if filter_parts:
             command += ["-vf", ",".join(filter_parts), "-c:v", "libx264"]
         else:
             command += ["-c:v", "libx264"]
-        command += ["-crf", str(crf), "-preset", "medium", "-pix_fmt", "yuv420p",
-                    "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(target)]
+        command += ["-crf", str(crf), "-preset", "medium", "-pix_fmt", "yuv420p"]
+        if bgm:
+            command += [
+                "-filter_complex",
+                "[1:a]volume=0.12[bgm];[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2[audio]",
+                "-map", "0:v", "-map", "[audio]",
+            ]
+        command += ["-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(target)]
         run(command, cwd=out)
+        thumbnail = out / f"{target.stem}.jpg"
+        run([
+            "ffmpeg", "-y", "-ss", "0", "-i", str(target), "-frames:v", "1",
+            "-q:v", "3", str(thumbnail),
+        ], cwd=out)
         if ass_path.exists():
             ass_path.unlink()
         item = dict(moment)
         item.update({"file": str(target), "title_suggestion": first_text[:100],
-                     "end": end, "duration": end - start})
+                     "end": end, "duration": end - start,
+                     "thumbnail": str(thumbnail)})
         results.append(item)
     return results
 
@@ -368,6 +407,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--min", dest="minimum", type=float, default=20)
     parser.add_argument("--max", dest="maximum", type=float, default=55)
     parser.add_argument("--format", choices=("vertical", "original"), default="vertical")
+    parser.add_argument("--aspect-ratio", choices=("9:16", "16:9", "1:1", "3:4", "4:5"))
+    parser.add_argument("--font-style", choices=("HORMOZI", "DEFAULT", "STORYTELLER", "CINEMATIC"), default="HORMOZI")
+    parser.add_argument("--bgm", type=Path)
     parser.add_argument("--no-captions", action="store_true")
     parser.add_argument("--model", default="small")
     parser.add_argument("--crf", type=int, default=18)
@@ -394,8 +436,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("[3/4] Finding viral moments...")
         moments = find_moments(segments, energies, laughter, args.minimum, args.maximum, args.num)
         print("[4/4] Rendering clips...")
-        results = cut_clips(video, out, moments, segments, args.format == "vertical",
-                            not args.no_captions, args.crf, laughter)
+        aspect_ratio = args.aspect_ratio or ("9:16" if args.format == "vertical" else "")
+        results = cut_clips(
+            video, out, moments, segments, aspect_ratio, not args.no_captions,
+            args.crf, laughter, args.font_style, args.bgm,
+        )
         (out / "clips.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
         print(f"Done: rendered {len(results)} clip(s) to {out}")
         return 0

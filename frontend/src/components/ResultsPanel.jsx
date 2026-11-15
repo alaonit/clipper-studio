@@ -5,7 +5,7 @@ export function ResultsPanel({ job }) {
     <section className="card results-card">
       <div className="card-heading"><div><span className="step">02</span><h2>Your clips</h2></div>{job?.results?.length ? <span className="result-count">{job.results.length} ready</span> : null}</div>
       {job ? <Progress job={job} /> : <EmptyState />}
-      {job?.results?.map((clip, index) => <article className="clip-row" key={clip.file}><div className="clip-icon"><Film size={18} /></div><div className="clip-details"><strong>{clip.title_suggestion || `Clip ${index + 1}`}</strong><span>{Number(clip.duration || 0).toFixed(1)} seconds <i>·</i> Score {Number(clip.score || 0).toFixed(2)}</span></div><a className="watch-button" href={clip.url} target="_blank" rel="noreferrer"><Play size={15} fill="currentColor" /> Watch</a></article>)}
+      {job?.results?.map((clip, index) => <article className="clip-row" key={clip.file}><div className="clip-icon">{clip.thumbnail_url ? <img className="clip-thumb" src={clip.thumbnail_url} alt="" /> : <Film size={18} />}</div><div className="clip-details"><strong>{clip.title_suggestion || `Clip ${index + 1}`}</strong><span>{Number(clip.duration || 0).toFixed(1)} seconds <i>·</i> Score {Number(clip.score || 0).toFixed(2)}</span></div><a className="watch-button" href={clip.url} target="_blank" rel="noreferrer"><Play size={15} fill="currentColor" /> Watch</a></article>)}
       {job?.log?.length ? <details className="activity"><summary>Activity log</summary><pre>{job.log.join("\n")}</pre></details> : null}
     </section>
   );
