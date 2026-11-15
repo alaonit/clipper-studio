@@ -32,7 +32,7 @@ SUPABASE_KEY = (
 )
 FEATURE_ENV = {
     "gemini": "GOOGLE_API_KEY",
-    "broll": "PEXELS_API_KEY",
+    "broll": "PIXABAY_API_KEY",
     "diarization": "HF_TOKEN",
     "youtube_publish": "YOUTUBE_CLIENT_ID",
 }

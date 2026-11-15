@@ -125,18 +125,23 @@ The Studio currently supports five aspect ratios (`9:16`, `16:9`, `1:1`,
 `3:4`, and `4:5`), four timed subtitle styles, optional background music
 uploads (`mp3`, `m4a`, `wav`, or `ogg`), and generated clip thumbnails.
 Face tracking, B-roll, voice-over, speaker diarization, and social publishing
-still require their respective external models/APIs. Render exposes the
-provider variables below for capability detection, but the full reference
-renderer should run from its isolated Kaggle/Colab GPU notebook rather than
-the free Render CPU worker:
+still require their respective external models/APIs. B-roll uses Pixabay
+instead of Pexels because new Pexels API-key issuance is currently paused.
+Render exposes the provider variables below for capability detection, but the
+full reference renderer should run from its isolated Kaggle/Colab GPU notebook
+rather than the free Render CPU worker:
 
 ```text
 GOOGLE_API_KEY
-PEXELS_API_KEY
+PIXABAY_API_KEY
 HF_TOKEN
 YOUTUBE_CLIENT_ID
 YOUTUBE_CLIENT_SECRET
 ```
+
+Create a Pixabay key from the [Pixabay API page](https://pixabay.com/api/docs/),
+then add it to Render as `PIXABAY_API_KEY`. Keep the key server-side; the
+frontend must never call Pixabay directly.
 
 Never put these values in frontend code or commit them. The Studio Settings
 page reports which provider credentials are configured without displaying
