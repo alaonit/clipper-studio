@@ -49,7 +49,17 @@ export function useClipJob() {
       const source = payload.file
         ? (await uploadSource(payload.file, requestController.signal)).source
         : payload.source;
-      const jobPayload = { ...payload, source };
+      const jobPayload = {
+        ...payload,
+        source,
+        url: source,
+        num_clips: payload.num,
+        aspect_ratio: payload.aspectRatio,
+        font_style: payload.fontStyle,
+        ai_provider: payload.aiProvider,
+        whisper_model: payload.model,
+        device: payload.device,
+      };
       delete jobPayload.file;
       const { id } = await createJob(jobPayload, requestController.signal);
       await poll(id);

@@ -344,6 +344,32 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/api/health":
+            json_response(self, {
+                "status": "ok",
+                "service": "clipper-studio",
+                "supabase": SUPABASE.enabled,
+            })
+            return
+        if parsed.path == "/api/ready":
+            json_response(self, {"status": "ok", "ready": True})
+            return
+        if parsed.path == "/api/jobs":
+            with JOBS_LOCK:
+                jobs = [
+                    {key: value for key, value in job.items() if key != "process"}
+                    | {"id": job_id}
+                    for job_id, job in JOBS.items()
+                ]
+            json_response(self, {"jobs": jobs})
+            return
+        if parsed.path == "/api/settings":
+            json_response(self, {
+                "backend": "clipper-studio",
+                "supabase_enabled": SUPABASE.enabled,
+                "allow_url_download": ALLOW_URL_DOWNLOAD,
+            })
+            return
         if parsed.path == "/":
             frontend_index = FRONTEND_DIST / "index.html"
             if frontend_index.is_file():
@@ -418,6 +444,26 @@ class Handler(BaseHTTPRequestHandler):
         threading.Thread(target=run_job, args=(
             job_id, payload), daemon=True).start()
         json_response(self, {"id": job_id}, 202)
+
+    def do_DELETE(self) -> None:
+        parts = self.path.strip("/").split("/")
+        if len(parts) != 3 or parts[:2] != ["api", "jobs"]:
+            json_response(self, {"error": "Not found."}, 404)
+            return
+        with JOBS_LOCK:
+            job = JOBS.get(parts[2])
+            if not job:
+                json_response(self, {"error": "Job not found."}, 404)
+                return
+            process = job.get("process")
+            if process and process.poll() is None:
+                process.terminate()
+                job.update(status="cancelled", message="Cancellation requested")
+            else:
+                JOBS.pop(parts[2], None)
+        if SUPABASE.enabled:
+            SUPABASE.update_job(parts[2], status="cancelled", message="Cancellation requested")
+        json_response(self, {"status": "ok"})
 
     def _handle_upload(self) -> None:
         content_type = self.headers.get("Content-Type", "")

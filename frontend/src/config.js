@@ -12,4 +12,8 @@ export const DEFAULT_FORM = Object.freeze({
   model: "base",
   format: "vertical",
   captions: true,
+  aspectRatio: "9:16",
+  fontStyle: "HORMOZI",
+  aiProvider: "gemini",
+  device: "auto",
 });

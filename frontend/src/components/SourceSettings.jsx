@@ -17,6 +17,10 @@ export function SourceSettings({ form, onChange, onSubmit, disabled, error }) {
         <SelectField label="Whisper model" value={form.model} onChange={(value) => update("model", value)} options={MODEL_OPTIONS} />
         <NumberField label="Minimum duration" suffix="sec" value={form.minimum} onChange={(value) => update("minimum", value)} />
         <NumberField label="Maximum duration" suffix="sec" value={form.maximum} onChange={(value) => update("maximum", value)} />
+        <SelectField label="Aspect ratio" value={form.aspectRatio} onChange={(value) => update("aspectRatio", value)} options={["9:16", "16:9", "1:1", "3:4", "4:5"]} />
+        <SelectField label="Font style" value={form.fontStyle} onChange={(value) => update("fontStyle", value)} options={["HORMOZI", "DEFAULT", "STORYTELLER", "CINEMATIC"]} />
+        <SelectField label="AI provider" value={form.aiProvider} onChange={(value) => update("aiProvider", value)} options={["gemini", "nvidia"]} />
+        <SelectField label="Device" value={form.device} onChange={(value) => update("device", value)} options={["auto", "cuda", "cpu"]} />
       </div>
       <label>Video format</label>
       <div className="segmented">
