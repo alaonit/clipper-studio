@@ -119,6 +119,13 @@ private `videos` bucket, and completed clips are uploaded to the private
 `clips` bucket. The API returns one-hour signed clip URLs. Without these
 variables, local mode continues to use its in-memory jobs and local files.
 
+### Studio interface attribution
+
+The Studio dashboard navigation and remote-backend connection workflow are
+inspired by [OpenSource Clipping](https://github.com/NaufalRizqullah/opensource-clipping),
+which is released under the MIT License. This project does not copy its source
+files; advanced GPU rendering features from that project are not included yet.
+
 ### Command line
 
 ```bash
