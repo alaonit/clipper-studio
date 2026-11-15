@@ -23,10 +23,7 @@ async function request(path, options) {
   try {
     response = await fetch(`${getBackendUrl()}${path}`, {
       ...options,
-      headers: {
-        "ngrok-skip-browser-warning": "true",
-        ...(options?.headers || {}),
-      },
+      headers: options?.headers,
     });
   } catch {
     throw new Error("The clipping backend is unavailable. Check the backend URL and try again.");
